@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -31,6 +31,7 @@ async function run() {
     );
 
     const userCollection = client.db("taskManagement").collection("users");
+    const taskCollection = client.db("taskManagement").collection("tasks");
 
     // user related apis
     app.post("/users", async (req, res) => {
@@ -41,6 +42,53 @@ async function run() {
         return res.send({ message: "user already exists", insertedId: null });
       }
       const result = await userCollection.insertOne(user);
+      res.send(result);
+    });
+
+    // tasks related apis
+
+    app.get("/tasks", async (req, res) => {
+      const { category } = req.query;
+      const query = category ? { category } : {};
+      const tasks = await taskCollection.find(query).toArray();
+      res.send(tasks);
+    });
+
+    // Create a new task
+    app.post("/tasks", async (req, res) => {
+      const task = req.body;
+      const result = await taskCollection.insertOne(task);
+      res.send(result);
+    });
+
+    // Edit a task
+    app.put("/tasks/:id", async (req, res) => {
+      const taskId = req.params.id;
+      const updatedData = req.body;
+      const result = await taskCollection.updateOne(
+        { _id: new ObjectID(taskId) },
+        { $set: updatedData }
+      );
+      res.send(result);
+    });
+
+    // Delete a task
+    app.delete("/tasks/:id", async (req, res) => {
+      const taskId = req.params.id;
+      const result = await taskCollection.deleteOne({
+        _id: new ObjectID(taskId),
+      });
+      res.send(result);
+    });
+
+    // Move a task between categories (To-Do, In Progress, Done)
+    app.put("/tasks/:id/move", async (req, res) => {
+      const taskId = req.params.id;
+      const { category } = req.body;
+      const result = await taskCollection.updateOne(
+        { _id: new ObjectId(taskId) },
+        { $set: { category } }
+      );
       res.send(result);
     });
   } finally {
