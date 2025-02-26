@@ -47,9 +47,9 @@ async function run() {
 
     // tasks related apis
 
-    app.get("/tasks", async (req, res) => {
-      const { category } = req.query;
-      const query = category ? { category } : {};
+    app.get("/tasks/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
       const tasks = await taskCollection.find(query).toArray();
       res.send(tasks);
     });
@@ -62,13 +62,29 @@ async function run() {
     });
 
     // Edit a task
-    app.put("/tasks/:id", async (req, res) => {
+    app.put("/tasks/:id/move", async (req, res) => {
       const taskId = req.params.id;
       const updatedData = req.body;
+      // console.log("Updating task", taskId, "with data:", updatedData);
       const result = await taskCollection.updateOne(
-        { _id: new ObjectID(taskId) },
+        { _id: new ObjectId(taskId) },
         { $set: updatedData }
       );
+      res.send(result);
+    });
+
+    app.patch("/tasks/:id", async (req, res) => {
+      const task = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedData = {
+        $set: {
+          title: task.title,
+          description: task.description,
+          timestamp: task.timestamp,
+        },
+      };
+      const result = await taskCollection.updateOne(filter, updatedData);
       res.send(result);
     });
 
@@ -76,19 +92,8 @@ async function run() {
     app.delete("/tasks/:id", async (req, res) => {
       const taskId = req.params.id;
       const result = await taskCollection.deleteOne({
-        _id: new ObjectID(taskId),
+        _id: new ObjectId(taskId),
       });
-      res.send(result);
-    });
-
-    // Move a task between categories (To-Do, In Progress, Done)
-    app.put("/tasks/:id/move", async (req, res) => {
-      const taskId = req.params.id;
-      const { category } = req.body;
-      const result = await taskCollection.updateOne(
-        { _id: new ObjectId(taskId) },
-        { $set: { category } }
-      );
       res.send(result);
     });
   } finally {
